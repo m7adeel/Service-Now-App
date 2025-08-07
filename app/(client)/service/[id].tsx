@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useServicesStore } from '@/store/servicesStore';
 import { useAuthStore } from '@/store/authStore';
+import { useBookingsStore } from '@/store/bookingsStore';
 import { useLocation } from '@/hooks/useLocation';
 import { 
   MapPin, 
@@ -17,6 +18,7 @@ import {
   Navigation
 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
+import BookingModal from '@/components/BookingModal';
 
 type ServiceDetails = {
   id: string;
@@ -40,10 +42,12 @@ export default function ServiceDetails() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { profile } = useAuthStore();
-  const { address: userLocation } = useLocation();
+  const { createBooking } = useBookingsStore();
+  const { latitude, longitude } = useLocation();
   const [service, setService] = useState<ServiceDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isBooking, setIsBooking] = useState(false);
+  const [showBookingModal, setShowBookingModal] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -80,29 +84,33 @@ export default function ServiceDetails() {
     }
   };
 
-  const handleBookService = async () => {
+  const handleBookService = () => {
+    if (!profile || !service) return;
+    setShowBookingModal(true);
+  };
+
+  const handleConfirmBooking = async (bookingData: {
+    scheduled_date: string;
+    scheduled_time: string;
+    notes: string;
+  }) => {
     if (!profile || !service) return;
 
     try {
       setIsBooking(true);
       
-      // Create a booking
-      const { data: booking, error } = await supabase
-        .from('bookings')
-        .insert({
-          client_id: profile.id,
-          service_id: service.id,
-          provider_id: service.provider_id,
-          scheduled_date: new Date().toISOString().split('T')[0], // Today's date
-          scheduled_time: '10:00:00', // Default time
-          status: 'pending',
-          notes: 'Booking created from service details page',
-        })
-        .select()
-        .single();
+      await createBooking({
+        client_id: profile.id,
+        service_id: service.id,
+        provider_id: service.provider_id,
+        scheduled_date: bookingData.scheduled_date,
+        scheduled_time: bookingData.scheduled_time,
+        status: 'pending',
+        notes: bookingData.notes || null,
+      });
 
-      if (error) throw error;
-
+      setShowBookingModal(false);
+      
       Alert.alert(
         'Booking Created!',
         'Your booking has been created successfully. The provider will contact you soon.',
@@ -141,14 +149,14 @@ export default function ServiceDetails() {
   };
 
   const getDistanceFromUser = () => {
-    if (!userLocation || !service?.profiles?.location) return null;
+    if (!latitude || !longitude || !service?.profiles?.location) return null;
     
-    const providerLocation = service.profiles.location;
-    if (!providerLocation.latitude || !providerLocation.longitude) return null;
+    const providerLocation = service.profiles.location as any;
+    if (!providerLocation?.latitude || !providerLocation?.longitude) return null;
 
     // Simple distance calculation (Haversine formula would be more accurate)
-    const latDiff = Math.abs(userLocation.latitude - providerLocation.latitude);
-    const lonDiff = Math.abs(userLocation.longitude - providerLocation.longitude);
+    const latDiff = Math.abs(latitude - providerLocation.latitude);
+    const lonDiff = Math.abs(longitude - providerLocation.longitude);
     const distance = Math.sqrt(latDiff * latDiff + lonDiff * lonDiff) * 111; // Rough km conversion
     
     return distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)}km`;
@@ -158,7 +166,7 @@ export default function ServiceDetails() {
     return (
       <SafeAreaView className="flex-1 bg-white">
         <View className="flex-1 justify-center items-center">
-          <Text className="text-gray-600">Loading service details...</Text>
+          <Text className="text-gray-600">Loading service details... </Text>
         </View>
       </SafeAreaView>
     );
@@ -339,6 +347,15 @@ export default function ServiceDetails() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Booking Modal */}
+      <BookingModal
+        visible={showBookingModal}
+        onClose={() => setShowBookingModal(false)}
+        onConfirm={handleConfirmBooking}
+        serviceTitle={service?.title || ''}
+        isLoading={isBooking}
+      />
     </SafeAreaView>
   );
 } 

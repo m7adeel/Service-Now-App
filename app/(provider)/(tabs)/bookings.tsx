@@ -241,7 +241,7 @@ export default function ProviderBookings() {
             </TouchableOpacity>
           </View>
           <ScrollView>
-            {/* <AgendaScreen /> */}
+            
           </ScrollView>
         </SafeAreaView>
       </Modal>
