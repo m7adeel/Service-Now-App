@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { useServicesStore } from '@/store/servicesStore';
 import { MapPin, Star, Clock } from 'lucide-react-native';
+import { useLocation } from '@/hooks/useLocation';
 
 const CATEGORIES = [
   'All',
@@ -17,10 +19,13 @@ const CATEGORIES = [
 ];
 
 export default function ClientHome() {
+  const router = useRouter();
   const { profile } = useAuthStore();
   const { services, isLoading, fetchServices } = useServicesStore();
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [refreshing, setRefreshing] = useState(false);
+
+  const { address } = useLocation();
 
   useEffect(() => {
     fetchServices();
@@ -32,7 +37,7 @@ export default function ClientHome() {
     setRefreshing(false);
   };
 
-  const filteredServices = services.filter(service => 
+  const filteredServices = services.filter(service =>
     selectedCategory === 'All' || service.category === selectedCategory
   );
 
@@ -50,7 +55,7 @@ export default function ClientHome() {
           </Text>
           <View className="flex-row items-center mt-2">
             <MapPin size={16} color="#6b7280" />
-            <Text className="text-gray-600 ml-1">Your Location</Text>
+            <Text className="text-gray-600 ml-1">{address?.city}, {address?.country}</Text>
           </View>
         </View>
 
@@ -63,16 +68,14 @@ export default function ClientHome() {
                 <TouchableOpacity
                   key={category}
                   onPress={() => setSelectedCategory(category)}
-                  className={`px-4 py-2 rounded-full border ${
-                    selectedCategory === category
+                  className={`px-4 py-2 rounded-full border ${selectedCategory === category
                       ? 'bg-primary-500 border-primary-500'
                       : 'bg-white border-gray-200'
-                  }`}
+                    }`}
                 >
                   <Text
-                    className={`font-semibold ${
-                      selectedCategory === category ? 'text-white' : 'text-gray-700'
-                    }`}
+                    className={`font-semibold ${selectedCategory === category ? 'text-white' : 'text-gray-700'
+                      }`}
                   >
                     {category}
                   </Text>
@@ -90,6 +93,7 @@ export default function ClientHome() {
           {filteredServices.map((service) => (
             <TouchableOpacity
               key={service.id}
+              onPress={() => router.push(`/service/${service.id}`)}
               className="bg-white border border-gray-200 rounded-lg p-4 mb-4 shadow-sm"
             >
               <View className="flex-row">

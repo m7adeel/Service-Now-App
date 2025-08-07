@@ -11,8 +11,7 @@ export default function ClientTabLayout() {
           borderTopWidth: 1,
           borderTopColor: '#e5e7eb',
           paddingBottom: 8,
-          paddingTop: 8,
-          height: 70,
+          paddingTop: 8
         },
         tabBarActiveTintColor: '#3b82f6',
         tabBarInactiveTintColor: '#6b7280',

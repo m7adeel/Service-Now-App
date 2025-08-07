@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useServicesStore } from '@/store/servicesStore';
 import { Search as SearchIcon, Filter, Star, Clock } from 'lucide-react-native';
 
@@ -16,6 +17,7 @@ const CATEGORIES = [
 ];
 
 export default function Search() {
+  const router = useRouter();
   const { services, searchQuery, selectedCategory, fetchServices, searchServices, filterByCategory } = useServicesStore();
   const [localSearch, setLocalSearch] = useState(searchQuery);
 
@@ -93,6 +95,7 @@ export default function Search() {
         {filteredServices.map((service) => (
           <TouchableOpacity
             key={service.id}
+            onPress={() => router.push(`/service/${service.id}`)}
             className="bg-white border border-gray-200 rounded-lg p-4 mb-4 shadow-sm"
           >
             <View className="flex-row">
@@ -130,7 +133,13 @@ export default function Search() {
                       </Text>
                     </View>
                   </View>
-                  <TouchableOpacity className="bg-primary-500 px-4 py-2 rounded-lg">
+                  <TouchableOpacity 
+                    className="bg-primary-500 px-4 py-2 rounded-lg"
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      router.push(`/service/${service.id}`);
+                    }}
+                  >
                     <Text className="text-white font-semibold text-sm">Book Now</Text>
                   </TouchableOpacity>
                 </View>

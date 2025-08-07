@@ -149,7 +149,7 @@ export default function ProviderDashboard() {
         </View>
 
         {/* Quick Actions */}
-        <View className="px-6 mb-6">
+        {/* <View className="px-6 mb-6">
           <Text className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</Text>
           <View className="flex-row space-x-3">
             <TouchableOpacity className="flex-1 bg-primary-500 rounded-lg p-4 items-center">
@@ -161,7 +161,7 @@ export default function ProviderDashboard() {
               <Text className="text-white font-semibold mt-2">Mark Complete</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </View> */}
       </ScrollView>
     </SafeAreaView>
   );

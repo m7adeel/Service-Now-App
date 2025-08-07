@@ -18,7 +18,7 @@ const CATEGORIES = [
 
 export default function ProviderServices() {
   const { profile } = useAuthStore();
-  const { services, fetchServices, createService, updateService, deleteService } = useServicesStore();
+  const { services, fetchProviderServices, createService, updateService, deleteService, toggleServiceStatus } = useServicesStore();
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingService, setEditingService] = useState<any>(null);
@@ -31,16 +31,20 @@ export default function ProviderServices() {
   });
 
   useEffect(() => {
-    fetchServices();
-  }, []);
+    if (profile?.id) {
+      fetchProviderServices(profile.id);
+    }
+  }, [profile?.id]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchServices();
+    if (profile?.id) {
+      await fetchProviderServices(profile.id);
+    }
     setRefreshing(false);
   };
 
-  const providerServices = services.filter(service => service.provider_id === profile?.id);
+  const providerServices = services;
 
   const handleSaveService = async () => {
     if (!formData.title || !formData.price) {
@@ -60,6 +64,11 @@ export default function ProviderServices() {
         await updateService(editingService.id, serviceData);
       } else {
         await createService(serviceData);
+      }
+
+      // Refresh the services list
+      if (profile?.id) {
+        await fetchProviderServices(profile.id);
       }
 
       setModalVisible(false);
@@ -94,6 +103,10 @@ export default function ProviderServices() {
           onPress: async () => {
             try {
               await deleteService(service.id);
+              // Refresh the services list
+              if (profile?.id) {
+                await fetchProviderServices(profile.id);
+              }
               Alert.alert('Success', 'Service deleted successfully!');
             } catch (error: any) {
               Alert.alert('Error', error.message);
@@ -102,6 +115,19 @@ export default function ProviderServices() {
         }
       ]
     );
+  };
+
+  const handleToggleServiceStatus = async (service: any) => {
+    try {
+      await toggleServiceStatus(service.id);
+      // Refresh the services list
+      if (profile?.id) {
+        await fetchProviderServices(profile.id);
+      }
+      Alert.alert('Success', `Service ${service.is_active ? 'deactivated' : 'activated'} successfully!`);
+    } catch (error: any) {
+      Alert.alert('Error', error.message);
+    }
   };
 
   const resetForm = () => {
@@ -202,6 +228,7 @@ export default function ProviderServices() {
                   {service.is_active ? 'Active' : 'Inactive'}
                 </Text>
                 <TouchableOpacity
+                  onPress={() => handleToggleServiceStatus(service)}
                   className={`px-4 py-2 rounded-lg ${
                     service.is_active ? 'bg-error-100' : 'bg-success-100'
                   }`}

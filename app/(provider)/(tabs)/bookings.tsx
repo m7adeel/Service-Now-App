@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBookingsStore } from '@/store/bookingsStore';
 import { useAuthStore } from '@/store/authStore';
-import { Calendar, Clock, User, Phone, Check, X } from 'lucide-react-native';
+import { Calendar as CalendarIcon, Clock, User, Phone, Check, X, Eye } from 'lucide-react-native';
 import { format } from 'date-fns';
 
 const STATUS_COLORS = {
@@ -18,6 +18,7 @@ export default function ProviderBookings() {
   const { bookings, isLoading, fetchBookings, updateBookingStatus } = useBookingsStore();
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'pending' | 'confirmed' | 'completed'>('pending');
+  const [showCalendar, setShowCalendar] = useState(false);
 
   useEffect(() => {
     fetchBookings();
@@ -33,7 +34,7 @@ export default function ProviderBookings() {
 
   const pendingBookings = providerBookings.filter(booking => booking.status === 'pending');
   const confirmedBookings = providerBookings.filter(booking => booking.status === 'confirmed');
-  const completedBookings = providerBookings.filter(booking => 
+  const completedBookings = providerBookings.filter(booking =>
     booking.status === 'completed' || booking.status === 'cancelled'
   );
 
@@ -60,43 +61,46 @@ export default function ProviderBookings() {
   return (
     <SafeAreaView className="flex-1 bg-white">
       <View className="px-6 py-4">
-        <Text className="text-2xl font-bold text-gray-900 mb-4">Bookings</Text>
-        
+        <View className="flex-row justify-between items-center mb-4">
+          <Text className="text-2xl font-bold text-gray-900">Bookings</Text>
+          <TouchableOpacity
+            onPress={() => setShowCalendar(true)}
+            className="bg-primary-500 px-4 py-2 rounded-lg flex-row items-center"
+          >
+            <Eye size={16} color="white" />
+            <Text className="text-white font-semibold ml-2">Show Calendar</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Tabs */}
         <View className="flex-row bg-gray-100 rounded-lg p-1 mb-6">
           <TouchableOpacity
             onPress={() => setActiveTab('pending')}
-            className={`flex-1 py-2 rounded-md ${
-              activeTab === 'pending' ? 'bg-white shadow-sm' : ''
-            }`}
+            className={`flex-1 py-2 rounded-md ${activeTab === 'pending' ? 'bg-white shadow-sm' : ''
+              }`}
           >
-            <Text className={`text-center font-semibold ${
-              activeTab === 'pending' ? 'text-gray-900' : 'text-gray-600'
-            }`}>
+            <Text className={`text-center font-semibold ${activeTab === 'pending' ? 'text-gray-900' : 'text-gray-600'
+              }`}>
               Pending ({pendingBookings.length})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setActiveTab('confirmed')}
-            className={`flex-1 py-2 rounded-md ${
-              activeTab === 'confirmed' ? 'bg-white shadow-sm' : ''
-            }`}
+            className={`flex-1 py-2 rounded-md ${activeTab === 'confirmed' ? 'bg-white shadow-sm' : ''
+              }`}
           >
-            <Text className={`text-center font-semibold ${
-              activeTab === 'confirmed' ? 'text-gray-900' : 'text-gray-600'
-            }`}>
+            <Text className={`text-center font-semibold ${activeTab === 'confirmed' ? 'text-gray-900' : 'text-gray-600'
+              }`}>
               Confirmed ({confirmedBookings.length})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setActiveTab('completed')}
-            className={`flex-1 py-2 rounded-md ${
-              activeTab === 'completed' ? 'bg-white shadow-sm' : ''
-            }`}
+            className={`flex-1 py-2 rounded-md ${activeTab === 'completed' ? 'bg-white shadow-sm' : ''
+              }`}
           >
-            <Text className={`text-center font-semibold ${
-              activeTab === 'completed' ? 'text-gray-900' : 'text-gray-600'
-            }`}>
+            <Text className={`text-center font-semibold ${activeTab === 'completed' ? 'text-gray-900' : 'text-gray-600'
+              }`}>
               History ({completedBookings.length})
             </Text>
           </TouchableOpacity>
@@ -111,16 +115,16 @@ export default function ProviderBookings() {
       >
         {displayBookings.length === 0 ? (
           <View className="flex-1 justify-center items-center py-20">
-            <Calendar size={64} color="#d1d5db" />
+            <CalendarIcon size={64} color="#d1d5db" />
             <Text className="text-gray-500 text-lg mt-4">
               No {activeTab} bookings
             </Text>
             <Text className="text-gray-400 text-center mt-2">
-              {activeTab === 'pending' 
+              {activeTab === 'pending'
                 ? 'New booking requests will appear here'
                 : activeTab === 'confirmed'
-                ? 'Your confirmed appointments will appear here'
-                : 'Your completed and cancelled bookings will appear here'
+                  ? 'Your confirmed appointments will appear here'
+                  : 'Your completed and cancelled bookings will appear here'
               }
             </Text>
           </View>
@@ -150,7 +154,7 @@ export default function ProviderBookings() {
               </View>
 
               <View className="flex-row items-center mb-2">
-                <Calendar size={16} color="#6b7280" />
+                <CalendarIcon size={16} color="#6b7280" />
                 <Text className="text-gray-600 ml-2">
                   {format(new Date(booking.scheduled_date), 'EEEE, MMMM d, yyyy')}
                 </Text>
@@ -176,7 +180,7 @@ export default function ProviderBookings() {
                 <Text className="text-lg font-bold text-success-600">
                   ${booking.services.price}
                 </Text>
-                
+
                 {booking.status === 'pending' && (
                   <View className="flex-row space-x-2">
                     <TouchableOpacity
@@ -218,6 +222,29 @@ export default function ProviderBookings() {
           ))
         )}
       </ScrollView>
+
+      {/* Calendar Modal */}
+      <Modal
+        visible={showCalendar}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <SafeAreaView className="flex-1 bg-white">
+          <View className="flex-row items-center justify-between px-6 py-4 border-b border-gray-100">
+            <Text className="text-xl font-bold text-gray-900">Calendar</Text>
+            <TouchableOpacity
+              onPress={() => setShowCalendar(false)}
+              className="p-2 rounded-full bg-gray-100"
+              accessibilityLabel="Close calendar"
+            >
+              <X size={22} color="#6b7280" />
+            </TouchableOpacity>
+          </View>
+          <ScrollView>
+            {/* <AgendaScreen /> */}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
