@@ -5,6 +5,8 @@ import { useRouter } from 'expo-router';
 import { useServicesStore } from '@/store/servicesStore';
 import { Search as SearchIcon, Filter, Star, Clock } from 'lucide-react-native';
 
+import SearchBar from '@/components/SearchBar';
+
 const CATEGORIES = [
   'All',
   'Cleaning',
@@ -48,15 +50,10 @@ export default function Search() {
         <Text className="text-2xl font-bold text-gray-900 mb-4">Search Services</Text>
         
         {/* Search Bar */}
-        <View className="relative">
-          <SearchIcon size={20} color="#6b7280" className="absolute left-3 top-3 z-10" />
-          <TextInput
-            value={localSearch}
-            onChangeText={handleSearch}
-            placeholder="Search for services..."
-            className="bg-gray-50 border border-gray-200 rounded-lg pl-10 pr-4 py-3 text-gray-900"
-          />
-        </View>
+        <SearchBar 
+          searchQuery={localSearch}
+          setSearchQuery={setLocalSearch}
+        />
 
         {/* Filter Categories */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-4">

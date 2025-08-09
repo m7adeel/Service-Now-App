@@ -19,6 +19,7 @@ export default function ProviderBookings() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'pending' | 'confirmed' | 'completed'>('pending');
   const [showCalendar, setShowCalendar] = useState(false);
+  const [displayBooking, setDisplayBookings] = useState([]);
 
   useEffect(() => {
     fetchBookings();
@@ -31,7 +32,6 @@ export default function ProviderBookings() {
   };
 
   const providerBookings = bookings.filter(booking => booking.provider_id === profile?.id);
-
   const pendingBookings = providerBookings.filter(booking => booking.status === 'pending');
   const confirmedBookings = providerBookings.filter(booking => booking.status === 'confirmed');
   const completedBookings = providerBookings.filter(booking =>
@@ -47,6 +47,11 @@ export default function ProviderBookings() {
     }
   };
 
+  useEffect(() => {
+    const displayBookings = getDisplayBookings();
+    setDisplayBookings(displayBookings)
+  }, [activeTab])
+
   const handleUpdateStatus = async (bookingId: string, status: 'confirmed' | 'cancelled' | 'completed') => {
     try {
       await updateBookingStatus(bookingId, status);
@@ -55,8 +60,6 @@ export default function ProviderBookings() {
       Alert.alert('Error', error.message);
     }
   };
-
-  const displayBookings = getDisplayBookings();
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -113,7 +116,7 @@ export default function ProviderBookings() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {displayBookings.length === 0 ? (
+        {displayBooking.length === 0 ? (
           <View className="flex-1 justify-center items-center py-20">
             <CalendarIcon size={64} color="#d1d5db" />
             <Text className="text-gray-500 text-lg mt-4">
@@ -129,7 +132,7 @@ export default function ProviderBookings() {
             </Text>
           </View>
         ) : (
-          displayBookings.map((booking) => (
+          displayBooking.map((booking) => (
             <View
               key={booking.id}
               className="bg-white border border-gray-200 rounded-lg p-4 mb-4 shadow-sm"
@@ -241,7 +244,7 @@ export default function ProviderBookings() {
             </TouchableOpacity>
           </View>
           <ScrollView>
-            
+
           </ScrollView>
         </SafeAreaView>
       </Modal>
