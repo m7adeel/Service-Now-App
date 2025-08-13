@@ -1,5 +1,6 @@
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, FlatList } from 'react-native'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useNewServiceStore } from '@/store/newServiceStore'
 
 // Mock data for existing clients - replace with actual data from your backend
 const mockClients = [
@@ -10,6 +11,14 @@ const mockClients = [
 ]
 
 export default function NewClient() {
+  const { 
+    client, 
+    setClient, 
+    updateClient, 
+    nextStep, 
+    canProceedToNextStep 
+  } = useNewServiceStore()
+  
   const [viewMode, setViewMode] = useState<'options' | 'newClient' | 'existingClient'>('options')
   const [searchQuery, setSearchQuery] = useState('')
   const [formData, setFormData] = useState({
@@ -20,11 +29,29 @@ export default function NewClient() {
     notes: ''
   })
 
+  // Initialize form data from store if client exists
+  useEffect(() => {
+    if (client) {
+      setFormData({
+        name: client.name,
+        phoneNumber: client.phoneNumber,
+        email: client.email,
+        location: client.location,
+        notes: client.notes
+      })
+    }
+  }, [client])
+
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }))
+    
+    // Update store in real-time
+    if (client) {
+      updateClient({ [field]: value })
+    }
   }
 
   const handleSubmit = () => {
@@ -38,24 +65,43 @@ export default function NewClient() {
       return
     }
 
-    // Here you would typically send the data to your backend
-    console.log('Form submitted:', formData)
-    Alert.alert('Success', 'Client added successfully!')
+    // Save to store
+    const clientData = {
+      id: client?.id,
+      name: formData.name.trim(),
+      phoneNumber: formData.phoneNumber.trim(),
+      email: formData.email.trim(),
+      location: formData.location.trim(),
+      notes: formData.notes.trim()
+    }
     
-    // Reset form
-    setFormData({
-      name: '',
-      phoneNumber: '',
-      email: '',
-      location: '',
-      notes: ''
-    })
+    setClient(clientData)
+    
+    // Proceed to next step
+    nextStep()
   }
 
   const handleClientSelect = (client: any) => {
-    Alert.alert('Client Selected', `Selected: ${client.name}`, [
-      { text: 'OK', onPress: () => console.log('Client selected:', client) }
-    ])
+    const clientData = {
+      id: client.id,
+      name: client.name,
+      phoneNumber: client.phoneNumber,
+      email: client.email,
+      location: client.location,
+      notes: ''
+    }
+    
+    setClient(clientData)
+    setFormData({
+      name: client.name,
+      phoneNumber: client.phoneNumber,
+      email: client.email,
+      location: client.location,
+      notes: ''
+    })
+    
+    // Proceed to next step
+    nextStep()
   }
 
   const filteredClients = mockClients.filter(client =>
@@ -152,12 +198,12 @@ export default function NewClient() {
       <View style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
         <View style={{ backgroundColor: '#fff', padding: 16, borderBottomWidth: 1, borderBottomColor: '#ddd' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-            {/* <TouchableOpacity
+            <TouchableOpacity
               onPress={() => setViewMode('options')}
               style={{ marginRight: 16 }}
             >
               <Text style={{ color: '#007AFF', fontSize: 16 }}>← Back</Text>
-            </TouchableOpacity> */}
+            </TouchableOpacity>
             <Text style={{ fontSize: 20, fontWeight: 'bold' }}>Select Existing Client</Text>
           </View>
           
@@ -193,12 +239,12 @@ export default function NewClient() {
     <ScrollView style={{ flex: 1, backgroundColor: '#fff' }}>
       <View style={{ padding: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24 }}>
-          {/* <TouchableOpacity
+          <TouchableOpacity
             onPress={() => setViewMode('options')}
             style={{ marginRight: 16 }}
           >
             <Text style={{ color: '#007AFF', fontSize: 16 }}>← Back</Text>
-          </TouchableOpacity> */}
+          </TouchableOpacity>
           <Text style={{ fontSize: 24, fontWeight: 'bold' }}>
             Add New Client
           </Text>
@@ -313,15 +359,16 @@ export default function NewClient() {
 
         <TouchableOpacity
           style={{
-            backgroundColor: '#007AFF',
+            backgroundColor: canProceedToNextStep() ? '#007AFF' : '#ccc',
             padding: 16,
             borderRadius: 8,
             alignItems: 'center'
           }}
           onPress={handleSubmit}
+          disabled={!canProceedToNextStep()}
         >
           <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>
-            Add Client
+            Continue
           </Text>
         </TouchableOpacity>
       </View>

@@ -1,61 +1,36 @@
 import { View, Text, TouchableOpacity, ScrollView, Alert, Share, Linking } from 'react-native'
-import React, { useState } from 'react'
-
-// Mock invoice data - replace with actual data from your backend
-const mockInvoice = {
-  invoiceNumber: 'INV-2024-001',
-  issueDate: '2024-01-15',
-  dueDate: '2024-02-14',
-  client: {
-    name: 'John Doe',
-    email: 'john@example.com',
-    phone: '+1-555-0123',
-    address: '123 Main Street, New York, NY 10001'
-  },
-  services: [
-    {
-      id: '1',
-      name: 'House Cleaning',
-      description: 'Standard house cleaning service',
-      quantity: 1,
-      unitPrice: 150.00,
-      total: 150.00
-    },
-    {
-      id: '2',
-      name: 'Deep Cleaning',
-      description: 'Thorough deep cleaning service',
-      quantity: 1,
-      unitPrice: 250.00,
-      total: 250.00
-    },
-    {
-      id: '3',
-      name: 'Window Cleaning',
-      description: 'Professional window cleaning',
-      quantity: 2,
-      unitPrice: 80.00,
-      total: 160.00
-    }
-  ],
-  subtotal: 560.00,
-  taxRate: 8.5,
-  taxAmount: 47.60,
-  total: 607.60,
-  terms: 'Payment due within 30 days. 50% deposit required to begin work.',
-  notes: 'Thank you for choosing our services. We appreciate your business!',
-  company: {
-    name: 'CleanPro Services',
-    address: '456 Business Ave, Suite 100, New York, NY 10002',
-    phone: '+1-555-9876',
-    email: 'info@cleanpro.com',
-    website: 'www.cleanpro.com'
-  }
-}
+import React, { useState, useEffect } from 'react'
+import { useNewServiceStore } from '@/store/newServiceStore'
 
 export default function SendInvoice() {
+  const { 
+    client, 
+    quote, 
+    job, 
+    invoice, 
+    updateInvoice, 
+    previousStep, 
+    nextStep,
+    resetAll 
+  } = useNewServiceStore()
+
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
   const [isSharing, setIsSharing] = useState(false)
+
+  // Initialize invoice data from quote and job data
+  useEffect(() => {
+    if (quote.services.length > 0 && !invoice.services.length) {
+      updateInvoice({
+        services: quote.services,
+        subtotal: quote.subtotal,
+        taxRate: quote.taxRate,
+        taxAmount: quote.taxAmount,
+        total: quote.total,
+        terms: quote.terms,
+        notes: quote.notes
+      })
+    }
+  }, [quote])
 
   const handleDownloadPDF = async () => {
     setIsGeneratingPDF(true)
@@ -86,9 +61,9 @@ export default function SendInvoice() {
     
     try {
       const shareOptions = {
-        title: `Invoice ${mockInvoice.invoiceNumber}`,
-        message: `Invoice ${mockInvoice.invoiceNumber} for ${mockInvoice.client.name} - Total: $${mockInvoice.total.toFixed(2)}`,
-        url: `https://yourapp.com/invoices/${mockInvoice.invoiceNumber}`, // Replace with actual URL
+        title: `Invoice ${invoice.invoiceNumber}`,
+        message: `Invoice ${invoice.invoiceNumber} for ${client?.name || 'Client'} - Total: $${invoice.total.toFixed(2)}`,
+        url: `https://yourapp.com/invoices/${invoice.invoiceNumber}`, // Replace with actual URL
       }
       
       const result = await Share.share(shareOptions)
@@ -111,7 +86,7 @@ export default function SendInvoice() {
 
   const handleWhatsAppShare = async () => {
     try {
-      const message = `Invoice ${mockInvoice.invoiceNumber} for ${mockInvoice.client.name}\n\nTotal Amount: $${mockInvoice.total.toFixed(2)}\nDue Date: ${mockInvoice.dueDate}\n\nView invoice: https://yourapp.com/invoices/${mockInvoice.invoiceNumber}`
+      const message = `Invoice ${invoice.invoiceNumber} for ${client?.name || 'Client'}\n\nTotal Amount: $${invoice.total.toFixed(2)}\nDue Date: ${invoice.dueDate}\n\nView invoice: https://yourapp.com/invoices/${invoice.invoiceNumber}`
       const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(message)}`
       
       const canOpen = await Linking.canOpenURL(whatsappUrl)
@@ -127,10 +102,10 @@ export default function SendInvoice() {
 
   const handleEmailShare = async () => {
     try {
-      const subject = `Invoice ${mockInvoice.invoiceNumber} - ${mockInvoice.client.name}`
-      const body = `Dear ${mockInvoice.client.name},\n\nPlease find attached invoice ${mockInvoice.invoiceNumber}.\n\nTotal Amount: $${mockInvoice.total.toFixed(2)}\nDue Date: ${mockInvoice.dueDate}\n\nThank you for your business!\n\nBest regards,\n${mockInvoice.company.name}`
+      const subject = `Invoice ${invoice.invoiceNumber} - ${client?.name || 'Client'}`
+      const body = `Dear ${client?.name || 'Client'},\n\nPlease find attached invoice ${invoice.invoiceNumber}.\n\nTotal Amount: $${invoice.total.toFixed(2)}\nDue Date: ${invoice.dueDate}\n\nThank you for your business!\n\nBest regards,\nYour Company Name`
       
-      const mailtoUrl = `mailto:${mockInvoice.client.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+      const mailtoUrl = `mailto:${client?.email || ''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
       
       const canOpen = await Linking.canOpenURL(mailtoUrl)
       if (canOpen) {
@@ -145,8 +120,8 @@ export default function SendInvoice() {
 
   const handleSMSShare = async () => {
     try {
-      const message = `Invoice ${mockInvoice.invoiceNumber} for ${mockInvoice.client.name}. Total: $${mockInvoice.total.toFixed(2)}. Due: ${mockInvoice.dueDate}. View: https://yourapp.com/invoices/${mockInvoice.invoiceNumber}`
-      const smsUrl = `sms:${mockInvoice.client.phone}?body=${encodeURIComponent(message)}`
+      const message = `Invoice ${invoice.invoiceNumber} for ${client?.name || 'Client'}. Total: $${invoice.total.toFixed(2)}. Due: ${invoice.dueDate}. View: https://yourapp.com/invoices/${invoice.invoiceNumber}`
+      const smsUrl = `sms:${client?.phoneNumber || ''}?body=${encodeURIComponent(message)}`
       
       const canOpen = await Linking.canOpenURL(smsUrl)
       if (canOpen) {
@@ -159,6 +134,95 @@ export default function SendInvoice() {
     }
   }
 
+  const handleComplete = () => {
+    Alert.alert(
+      'Service Complete!',
+      'All steps have been completed successfully. Would you like to start a new service?',
+      [
+        {
+          text: 'Start New Service',
+          onPress: () => {
+            resetAll()
+            // Navigate back to first step
+          }
+        },
+        {
+          text: 'Stay Here',
+          style: 'cancel'
+        }
+      ]
+    )
+  }
+
+  if (!client) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#f5f5f5', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <Text style={{ fontSize: 18, color: '#666', textAlign: 'center', marginBottom: 20 }}>
+          Please go back and select a client first
+        </Text>
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#007AFF',
+            padding: 16,
+            borderRadius: 8,
+            alignItems: 'center'
+          }}
+          onPress={previousStep}
+        >
+          <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>
+            Go Back to Client Selection
+          </Text>
+        </TouchableOpacity>
+      </View>
+    )
+  }
+
+  if (quote.services.length === 0) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#f5f5f5', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <Text style={{ fontSize: 18, color: '#666', textAlign: 'center', marginBottom: 20 }}>
+          Please go back and create a quote with services first
+        </Text>
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#007AFF',
+            padding: 16,
+            borderRadius: 8,
+            alignItems: 'center'
+          }}
+          onPress={previousStep}
+        >
+          <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>
+            Go Back to Quote
+          </Text>
+        </TouchableOpacity>
+      </View>
+    )
+  }
+
+  if (!job.jobTitle) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#f5f5f5', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <Text style={{ fontSize: 18, color: '#666', textAlign: 'center', marginBottom: 20 }}>
+          Please go back and schedule the job first
+        </Text>
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#007AFF',
+            padding: 16,
+            borderRadius: 8,
+            alignItems: 'center'
+          }}
+          onPress={previousStep}
+        >
+          <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>
+            Go Back to Job Schedule
+          </Text>
+        </TouchableOpacity>
+      </View>
+    )
+  }
+
   return (
     <ScrollView style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
       <View style={{ padding: 16 }}>
@@ -166,18 +230,29 @@ export default function SendInvoice() {
           Invoice Details
         </Text>
 
+        {/* Service Summary */}
+        <View style={{ backgroundColor: '#fff', padding: 16, borderRadius: 8, marginBottom: 16 }}>
+          <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 12 }}>Service Summary</Text>
+          <View style={{ backgroundColor: '#f8f9fa', padding: 12, borderRadius: 6 }}>
+            <Text style={{ fontSize: 16, fontWeight: '600' }}>Job: {job.jobTitle}</Text>
+            <Text style={{ fontSize: 14, color: '#666' }}>Date: {job.scheduledDate} at {job.startTime}</Text>
+            <Text style={{ fontSize: 14, color: '#666' }}>Location: {job.location}</Text>
+            <Text style={{ fontSize: 14, color: '#666' }}>Priority: {job.priority}</Text>
+          </View>
+        </View>
+
         {/* Invoice Header */}
         <View style={{ backgroundColor: '#fff', padding: 16, borderRadius: 8, marginBottom: 16 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
             <View>
               <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#007AFF' }}>
-                {mockInvoice.company.name}
+                Your Company Name
               </Text>
               <Text style={{ fontSize: 14, color: '#666', marginTop: 4 }}>
-                {mockInvoice.company.address}
+                Your Company Address
               </Text>
               <Text style={{ fontSize: 14, color: '#666' }}>
-                {mockInvoice.company.phone} • {mockInvoice.company.email}
+                Your Phone • Your Email
               </Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
@@ -185,7 +260,7 @@ export default function SendInvoice() {
                 INVOICE
               </Text>
               <Text style={{ fontSize: 16, color: '#666', marginTop: 4 }}>
-                #{mockInvoice.invoiceNumber}
+                #{invoice.invoiceNumber || 'INV-2024-001'}
               </Text>
             </View>
           </View>
@@ -193,19 +268,21 @@ export default function SendInvoice() {
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
             <View>
               <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8 }}>Bill To:</Text>
-              <Text style={{ fontSize: 16, fontWeight: '600' }}>{mockInvoice.client.name}</Text>
-              <Text style={{ fontSize: 14, color: '#666' }}>{mockInvoice.client.address}</Text>
-              <Text style={{ fontSize: 14, color: '#666' }}>{mockInvoice.client.email}</Text>
-              <Text style={{ fontSize: 14, color: '#666' }}>{mockInvoice.client.phone}</Text>
+              <Text style={{ fontSize: 16, fontWeight: '600' }}>{client.name}</Text>
+              {client.location && (
+                <Text style={{ fontSize: 14, color: '#666' }}>{client.location}</Text>
+              )}
+              <Text style={{ fontSize: 14, color: '#666' }}>{client.email}</Text>
+              <Text style={{ fontSize: 14, color: '#666' }}>{client.phoneNumber}</Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
               <View style={{ marginBottom: 8 }}>
                 <Text style={{ fontSize: 14, color: '#666' }}>Issue Date:</Text>
-                <Text style={{ fontSize: 16, fontWeight: '600' }}>{mockInvoice.issueDate}</Text>
+                <Text style={{ fontSize: 16, fontWeight: '600' }}>{invoice.issueDate}</Text>
               </View>
               <View>
                 <Text style={{ fontSize: 14, color: '#666' }}>Due Date:</Text>
-                <Text style={{ fontSize: 16, fontWeight: '600', color: '#ff3b30' }}>{mockInvoice.dueDate}</Text>
+                <Text style={{ fontSize: 16, fontWeight: '600', color: '#ff3b30' }}>{invoice.dueDate}</Text>
               </View>
             </View>
           </View>
@@ -215,12 +292,12 @@ export default function SendInvoice() {
         <View style={{ backgroundColor: '#fff', padding: 16, borderRadius: 8, marginBottom: 16 }}>
           <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 16 }}>Services</Text>
           
-          {mockInvoice.services.map((service, index) => (
+          {invoice.services.map((service, index) => (
             <View key={service.id} style={{
-              borderBottomWidth: index === mockInvoice.services.length - 1 ? 0 : 1,
+              borderBottomWidth: index === invoice.services.length - 1 ? 0 : 1,
               borderBottomColor: '#eee',
-              paddingBottom: index === mockInvoice.services.length - 1 ? 0 : 12,
-              marginBottom: index === mockInvoice.services.length - 1 ? 0 : 12
+              paddingBottom: index === invoice.services.length - 1 ? 0 : 12,
+              marginBottom: index === invoice.services.length - 1 ? 0 : 12
             }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
                 <View style={{ flex: 1 }}>
@@ -233,7 +310,7 @@ export default function SendInvoice() {
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Text style={{ fontSize: 14, color: '#666' }}>
-                  {service.quantity} × ${service.unitPrice.toFixed(2)}
+                  {service.quantity} × ${service.basePrice.toFixed(2)}
                 </Text>
               </View>
             </View>
@@ -245,11 +322,11 @@ export default function SendInvoice() {
           <View style={{ alignItems: 'flex-end' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: 200, marginBottom: 8 }}>
               <Text style={{ fontSize: 16 }}>Subtotal:</Text>
-              <Text style={{ fontSize: 16 }}>${mockInvoice.subtotal.toFixed(2)}</Text>
+              <Text style={{ fontSize: 16 }}>${invoice.subtotal.toFixed(2)}</Text>
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: 200, marginBottom: 8 }}>
-              <Text style={{ fontSize: 16 }}>Tax ({mockInvoice.taxRate}%):</Text>
-              <Text style={{ fontSize: 16 }}>${mockInvoice.taxAmount.toFixed(2)}</Text>
+              <Text style={{ fontSize: 16 }}>Tax ({invoice.taxRate}%):</Text>
+              <Text style={{ fontSize: 16 }}>${invoice.taxAmount.toFixed(2)}</Text>
             </View>
             <View style={{ 
               flexDirection: 'row', 
@@ -261,7 +338,7 @@ export default function SendInvoice() {
             }}>
               <Text style={{ fontSize: 18, fontWeight: 'bold' }}>Total:</Text>
               <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#007AFF' }}>
-                ${mockInvoice.total.toFixed(2)}
+                ${invoice.total.toFixed(2)}
               </Text>
             </View>
           </View>
@@ -271,12 +348,12 @@ export default function SendInvoice() {
         <View style={{ backgroundColor: '#fff', padding: 16, borderRadius: 8, marginBottom: 24 }}>
           <View style={{ marginBottom: 16 }}>
             <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8 }}>Terms & Conditions</Text>
-            <Text style={{ fontSize: 14, color: '#666', lineHeight: 20 }}>{mockInvoice.terms}</Text>
+            <Text style={{ fontSize: 14, color: '#666', lineHeight: 20 }}>{invoice.terms}</Text>
           </View>
           
           <View>
             <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8 }}>Notes</Text>
-            <Text style={{ fontSize: 14, color: '#666', lineHeight: 20 }}>{mockInvoice.notes}</Text>
+            <Text style={{ fontSize: 14, color: '#666', lineHeight: 20 }}>{invoice.notes}</Text>
           </View>
         </View>
 
@@ -355,11 +432,45 @@ export default function SendInvoice() {
               backgroundColor: '#8E8E93',
               padding: 12,
               borderRadius: 8,
-              alignItems: 'center'
+              alignItems: 'center',
+              marginBottom: 12
             }}
             onPress={handleSMSShare}
           >
             <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Send SMS</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Navigation Buttons */}
+        <View style={{ flexDirection: 'row', gap: 12, marginBottom: 20 }}>
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#6c757d',
+              padding: 16,
+              borderRadius: 8,
+              flex: 1,
+              alignItems: 'center'
+            }}
+            onPress={previousStep}
+          >
+            <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>
+              Previous
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#28a745',
+              padding: 16,
+              borderRadius: 8,
+              flex: 1,
+              alignItems: 'center'
+            }}
+            onPress={nextStep}
+          >
+            <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>
+              Finalize
+            </Text>
           </TouchableOpacity>
         </View>
       </View>

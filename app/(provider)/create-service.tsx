@@ -1,5 +1,5 @@
-import { View, Text, SafeAreaView } from 'react-native'
-import React, { useState } from 'react'
+import { View, Text, SafeAreaView, TouchableOpacity, Alert } from 'react-native'
+import React, { useEffect } from 'react'
 
 import StepIndicator from 'react-native-step-indicator';
 import Swiper from 'react-native-swiper';
@@ -8,6 +8,7 @@ import CreateQuote from '@/components/pages/new-client/CreateQuote'
 import NewClient from '@/components/pages/new-client/NewClient'
 import ScheduleJob from '@/components/pages/new-client/ScheduleJob'
 import SendInvoice from '@/components/pages/new-client/SendInvoice'
+import { useNewServiceStore } from '@/store/newServiceStore'
 
 const PAGES = [
     {
@@ -29,14 +30,28 @@ const PAGES = [
         id: 4,
         name: 'Invoice',
         page: SendInvoice
-    },
+    }
 ]
 
 export default function CreateService() {
-    const [currentStep, setCurrentStep] = useState(0)
+    const { 
+        currentStep, 
+        setCurrentStep, 
+        canProceedToNextStep,
+        resetAll 
+    } = useNewServiceStore()
 
     const onStepPress = (position: number) => {
-        setCurrentStep(position);
+        // Only allow navigation to completed steps or the next available step
+        if (position <= currentStep || (position === currentStep + 1 && canProceedToNextStep())) {
+            setCurrentStep(position);
+        } else {
+            Alert.alert(
+                'Step Locked',
+                'Please complete the current step before proceeding to this one.',
+                [{ text: 'OK' }]
+            );
+        }
     };
 
     const renderViewPagerPage = (data: any) => {
@@ -47,8 +62,54 @@ export default function CreateService() {
         );
       };
 
+    const handleReset = () => {
+        Alert.alert(
+            'Reset Service Creation',
+            'Are you sure you want to reset all progress? This will clear all entered data.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                { 
+                    text: 'Reset', 
+                    style: 'destructive',
+                    onPress: () => {
+                        resetAll()
+                        setCurrentStep(0)
+                    }
+                }
+            ]
+        )
+    }
+
     return (
         <SafeAreaView className='flex-1 bg-white'>
+            {/* Header with Reset Button */}
+            <View style={{ 
+                flexDirection: 'row', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                borderBottomWidth: 1,
+                borderBottomColor: '#eee'
+            }}>
+                <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#333' }}>
+                    Create New Service
+                </Text>
+                <TouchableOpacity
+                    onPress={handleReset}
+                    style={{
+                        backgroundColor: '#dc3545',
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 6
+                    }}
+                >
+                    <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>
+                        Reset
+                    </Text>
+                </TouchableOpacity>
+            </View>
+
             <StepIndicator
                 customStyles={customStyles}
                 currentPosition={currentStep}
@@ -56,11 +117,13 @@ export default function CreateService() {
                 labels={PAGES.map(item => item.name)}
                 stepCount={PAGES.length}
             />
+            
             <Swiper
                 loop={false}
                 index={currentStep}
-                onIndexChanged={onStepPress}
+                onIndexChanged={setCurrentStep}
                 showsPagination={false}
+                scrollEnabled={false} // Disable manual swiping to enforce step-by-step flow
             >
                 {PAGES.map((page) => renderViewPagerPage(page))}
             </Swiper>

@@ -1,5 +1,6 @@
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, FlatList } from 'react-native'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useNewServiceStore } from '@/store/newServiceStore'
 
 // Mock data for services - replace with actual data from your backend
 const mockServices = [
@@ -9,13 +10,6 @@ const mockServices = [
   { id: '4', name: 'Carpet Cleaning', duration: 180, description: 'Deep carpet cleaning and stain removal' },
 ]
 
-// Mock data for clients - replace with actual data from your backend
-const mockClients = [
-  { id: '1', name: 'John Doe', phoneNumber: '+1-555-0123', email: 'john@example.com', location: 'New York' },
-  { id: '2', name: 'Jane Smith', phoneNumber: '+1-555-0456', email: 'jane@example.com', location: 'Los Angeles' },
-  { id: '3', name: 'Mike Johnson', phoneNumber: '+1-555-0789', email: 'mike@example.com', location: 'Chicago' },
-]
-
 // Mock data for time slots - replace with actual availability logic
 const timeSlots = [
   '08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
@@ -23,32 +17,37 @@ const timeSlots = [
 ]
 
 export default function ScheduleJob() {
-  const [selectedClient, setSelectedClient] = useState<any>(null)
-  const [showClientSelector, setShowClientSelector] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedServices, setSelectedServices] = useState<any[]>([])
-  const [showServiceSelector, setShowServiceSelector] = useState(false)
-  const [jobData, setJobData] = useState({
-    jobTitle: '',
-    scheduledDate: new Date().toISOString().split('T')[0],
-    startTime: '09:00 AM',
-    estimatedDuration: 0,
-    location: '',
-    specialInstructions: '',
-    priority: 'medium',
-    teamSize: 1,
-    equipment: '',
-    notes: ''
-  })
+  const { 
+    client, 
+    quote, 
+    job, 
+    updateJob, 
+    nextStep, 
+    previousStep, 
+    canProceedToNextStep 
+  } = useNewServiceStore()
 
-  const handleClientSelect = (client: any) => {
-    setSelectedClient(client)
-    setShowClientSelector(false)
-    // Auto-fill location if available
-    if (client.location) {
-      setJobData(prev => ({ ...prev, location: client.location }))
+  const [showServiceSelector, setShowServiceSelector] = useState(false)
+  const [selectedServices, setSelectedServices] = useState<any[]>([])
+
+  // Initialize job data from quote services if available
+  useEffect(() => {
+    if (quote.services.length > 0 && !job.jobTitle) {
+      const serviceNames = quote.services.map(s => s.name).join(', ')
+      updateJob({ 
+        jobTitle: `${serviceNames} for ${client?.name || 'Client'}`,
+        location: client?.location || ''
+      })
     }
-  }
+  }, [quote.services, client])
+
+  // Calculate estimated duration from selected services
+  useEffect(() => {
+    if (selectedServices.length > 0) {
+      const totalDuration = selectedServices.reduce((sum, service) => sum + service.duration, 0)
+      updateJob({ estimatedDuration: totalDuration })
+    }
+  }, [selectedServices])
 
   const handleServiceToggle = (service: any) => {
     const isSelected = selectedServices.find(s => s.id === service.id)
@@ -57,71 +56,35 @@ export default function ScheduleJob() {
       // Remove service
       const updatedServices = selectedServices.filter(s => s.id !== service.id)
       setSelectedServices(updatedServices)
-      updateEstimatedDuration(updatedServices)
     } else {
       // Add service
       const newService = { ...service }
       const updatedServices = [...selectedServices, newService]
       setSelectedServices(updatedServices)
-      updateEstimatedDuration(updatedServices)
     }
-  }
-
-  const updateEstimatedDuration = (services: any[]) => {
-    const totalDuration = services.reduce((sum, service) => sum + service.duration, 0)
-    setJobData(prev => ({ ...prev, estimatedDuration: totalDuration }))
   }
 
   const handleSubmit = () => {
-    if (!selectedClient) {
-      Alert.alert('Error', 'Please select a client')
+    if (!client) {
+      Alert.alert('Error', 'Please go back and select a client first')
       return
     }
-    if (selectedServices.length === 0) {
-      Alert.alert('Error', 'Please select at least one service')
-      return
-    }
-    if (!jobData.jobTitle.trim()) {
+    // if (selectedServices.length === 0) {
+    //   Alert.alert('Error', 'Please select at least one service')
+    //   return
+    // }
+    if (!job.jobTitle.trim()) {
       Alert.alert('Error', 'Please enter a job title')
       return
     }
-    if (!jobData.location.trim()) {
+    if (!job.location.trim()) {
       Alert.alert('Error', 'Please enter a location')
       return
     }
 
-    // Here you would typically send the data to your backend
-    console.log('Job scheduled:', { 
-      client: selectedClient, 
-      services: selectedServices, 
-      ...jobData 
-    })
-    Alert.alert('Success', 'Job scheduled successfully!')
+    // Proceed to next step
+    nextStep()
   }
-
-  const filteredClients = mockClients.filter(client =>
-    client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    client.phoneNumber.includes(searchQuery) ||
-    client.email.toLowerCase().includes(searchQuery.toLowerCase())
-  )
-
-  const renderClientItem = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={{
-        backgroundColor: '#fff',
-        padding: 16,
-        marginBottom: 8,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#ddd',
-      }}
-      onPress={() => handleClientSelect(item)}
-    >
-      <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 4 }}>{item.name}</Text>
-      <Text style={{ fontSize: 14, color: '#666', marginBottom: 2 }}>{item.phoneNumber}</Text>
-      <Text style={{ fontSize: 14, color: '#666' }}>{item.email}</Text>
-    </TouchableOpacity>
-  )
 
   const renderServiceItem = ({ item }: { item: any }) => {
     const isSelected = selectedServices.find(s => s.id === item.id)
@@ -162,46 +125,6 @@ export default function ScheduleJob() {
     )
   }
 
-  if (showClientSelector) {
-    return (
-      <View style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
-        <View style={{ backgroundColor: '#fff', padding: 16, borderBottomWidth: 1, borderBottomColor: '#ddd' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-            <TouchableOpacity
-              onPress={() => setShowClientSelector(false)}
-              style={{ marginRight: 16 }}
-            >
-              <Text style={{ color: '#007AFF', fontSize: 16 }}>← Back</Text>
-            </TouchableOpacity>
-            <Text style={{ fontSize: 20, fontWeight: 'bold' }}>Select Client</Text>
-          </View>
-          
-          <TextInput
-            style={{
-              borderWidth: 1,
-              borderColor: '#ddd',
-              borderRadius: 8,
-              padding: 12,
-              fontSize: 16,
-              backgroundColor: '#fff'
-            }}
-            placeholder="Search clients..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor="#999"
-          />
-        </View>
-
-        <FlatList
-          data={filteredClients}
-          renderItem={renderClientItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ padding: 16 }}
-        />
-      </View>
-    )
-  }
-
   if (showServiceSelector) {
     return (
       <View style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
@@ -227,6 +150,52 @@ export default function ScheduleJob() {
     )
   }
 
+  if (!client) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#f5f5f5', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <Text style={{ fontSize: 18, color: '#666', textAlign: 'center', marginBottom: 20 }}>
+          Please go back and select a client first
+        </Text>
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#007AFF',
+            padding: 16,
+            borderRadius: 8,
+            alignItems: 'center'
+          }}
+          onPress={previousStep}
+        >
+          <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>
+            Go Back to Client Selection
+          </Text>
+        </TouchableOpacity>
+      </View>
+    )
+  }
+
+  if (quote.services.length === 0) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#f5f5f5', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <Text style={{ fontSize: 18, color: '#666', textAlign: 'center', marginBottom: 20 }}>
+          Please go back and create a quote with services first
+        </Text>
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#007AFF',
+            padding: 16,
+            borderRadius: 8,
+            alignItems: 'center'
+          }}
+          onPress={previousStep}
+        >
+          <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>
+            Go Back to Quote
+          </Text>
+        </TouchableOpacity>
+      </View>
+    )
+  }
+
   return (
     <ScrollView style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
       <View style={{ padding: 16 }}>
@@ -234,7 +203,47 @@ export default function ScheduleJob() {
           Schedule Job
         </Text>
 
-        {/* Client Selection */}
+        {/* Client Information */}
+        <View style={{ backgroundColor: '#fff', padding: 16, borderRadius: 8, marginBottom: 16 }}>
+          <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 12 }}>Client</Text>
+          <View style={{ backgroundColor: '#f8f9fa', padding: 12, borderRadius: 6 }}>
+            <Text style={{ fontSize: 16, fontWeight: '600' }}>{client.name}</Text>
+            <Text style={{ fontSize: 14, color: '#666' }}>{client.phoneNumber}</Text>
+            <Text style={{ fontSize: 14, color: '#666' }}>{client.email}</Text>
+            {client.location && (
+              <Text style={{ fontSize: 14, color: '#666' }}>{client.location}</Text>
+            )}
+          </View>
+        </View>
+
+        {/* Quote Services Summary */}
+        <View style={{ backgroundColor: '#fff', padding: 16, borderRadius: 8, marginBottom: 16 }}>
+          <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 12 }}>Services from Quote</Text>
+          {quote.services.map((service, index) => (
+            <View key={service.id} style={{
+              borderBottomWidth: index === quote.services.length - 1 ? 0 : 1,
+              borderBottomColor: '#eee',
+              paddingBottom: index === quote.services.length - 1 ? 0 : 8,
+              marginBottom: index === quote.services.length - 1 ? 0 : 8
+            }}>
+              <Text style={{ fontSize: 16, fontWeight: '600' }}>{service.name}</Text>
+              <Text style={{ fontSize: 14, color: '#666' }}>
+                {service.quantity} × ${service.basePrice.toFixed(2)} = ${service.total.toFixed(2)}
+              </Text>
+            </View>
+          ))}
+          <View style={{ 
+            borderTopWidth: 1, 
+            borderTopColor: '#ddd', 
+            paddingTop: 8, 
+            marginTop: 8,
+            alignItems: 'flex-end'
+          }}>
+            <Text style={{ fontSize: 18, fontWeight: '600', color: '#007AFF' }}>
+              Total: ${quote.total.toFixed(2)}
+            </Text>
+          </View>
+        </View>
 
         {/* Job Details */}
         <View style={{ backgroundColor: '#fff', padding: 16, borderRadius: 8, marginBottom: 16 }}>
@@ -251,8 +260,8 @@ export default function ScheduleJob() {
                 fontSize: 16
               }}
               placeholder="Enter job title"
-              value={jobData.jobTitle}
-              onChangeText={(value) => setJobData(prev => ({ ...prev, jobTitle: value }))}
+              value={job.jobTitle}
+              onChangeText={(value) => updateJob({ jobTitle: value })}
             />
           </View>
 
@@ -267,8 +276,8 @@ export default function ScheduleJob() {
                 fontSize: 16
               }}
               placeholder="Enter job location"
-              value={jobData.location}
-              onChangeText={(value) => setJobData(prev => ({ ...prev, location: value }))}
+              value={job.location}
+              onChangeText={(value) => updateJob({ location: value })}
             />
           </View>
 
@@ -283,8 +292,8 @@ export default function ScheduleJob() {
                   padding: 10,
                   fontSize: 16
                 }}
-                value={jobData.scheduledDate}
-                onChangeText={(value) => setJobData(prev => ({ ...prev, scheduledDate: value }))}
+                value={job.scheduledDate}
+                onChangeText={(value) => updateJob({ scheduledDate: value })}
               />
             </View>
             <View style={{ flex: 1, marginLeft: 8 }}>
@@ -300,12 +309,12 @@ export default function ScheduleJob() {
                 onPress={() => {
                   Alert.alert('Select Time', 'Choose start time:', timeSlots.map(time => ({
                     text: time,
-                    onPress: () => setJobData(prev => ({ ...prev, startTime: time }))
+                    onPress: () => updateJob({ startTime: time })
                   })))
                 }}
               >
-                <Text style={{ fontSize: 16, color: jobData.startTime ? '#000' : '#999' }}>
-                  {jobData.startTime || 'Select time'}
+                <Text style={{ fontSize: 16, color: job.startTime ? '#000' : '#999' }}>
+                  {job.startTime || 'Select time'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -323,16 +332,16 @@ export default function ScheduleJob() {
                 <TouchableOpacity
                   key={priority}
                   style={{
-                    backgroundColor: jobData.priority === priority ? '#007AFF' : '#f0f0f0',
+                    backgroundColor: job.priority === priority ? '#007AFF' : '#f0f0f0',
                     paddingHorizontal: 16,
                     paddingVertical: 8,
                     borderRadius: 20,
                     marginRight: 8
                   }}
-                  onPress={() => setJobData(prev => ({ ...prev, priority }))}
+                  onPress={() => updateJob({ priority: priority as 'low' | 'medium' | 'high' })}
                 >
                   <Text style={{ 
-                    color: jobData.priority === priority ? '#fff' : '#666',
+                    color: job.priority === priority ? '#fff' : '#666',
                     textTransform: 'capitalize'
                   }}>
                     {priority}
@@ -355,11 +364,11 @@ export default function ScheduleJob() {
                   alignItems: 'center',
                   marginRight: 8
                 }}
-                onPress={() => setJobData(prev => ({ ...prev, teamSize: Math.max(1, prev.teamSize - 1) }))}
+                onPress={() => updateJob({ teamSize: Math.max(1, job.teamSize - 1) })}
               >
                 <Text style={{ fontSize: 18, fontWeight: 'bold' }}>-</Text>
               </TouchableOpacity>
-              <Text style={{ fontSize: 16, marginHorizontal: 8 }}>{jobData.teamSize}</Text>
+              <Text style={{ fontSize: 16, marginHorizontal: 8 }}>{job.teamSize}</Text>
               <TouchableOpacity
                 style={{
                   backgroundColor: '#f0f0f0',
@@ -370,7 +379,7 @@ export default function ScheduleJob() {
                   alignItems: 'center',
                   marginLeft: 8
                 }}
-                onPress={() => setJobData(prev => ({ ...prev, teamSize: prev.teamSize + 1 }))}
+                onPress={() => updateJob({ teamSize: job.teamSize + 1 })}
               >
                 <Text style={{ fontSize: 18, fontWeight: 'bold' }}>+</Text>
               </TouchableOpacity>
@@ -388,8 +397,8 @@ export default function ScheduleJob() {
                 fontSize: 16
               }}
               placeholder="Enter equipment requirements"
-              value={jobData.equipment}
-              onChangeText={(value) => setJobData(prev => ({ ...prev, equipment: value }))}
+              value={job.equipment}
+              onChangeText={(value) => updateJob({ equipment: value })}
             />
           </View>
         </View>
@@ -411,8 +420,8 @@ export default function ScheduleJob() {
                 textAlignVertical: 'top'
               }}
               placeholder="Enter any special instructions"
-              value={jobData.specialInstructions}
-              onChangeText={(value) => setJobData(prev => ({ ...prev, specialInstructions: value }))}
+              value={job.specialInstructions}
+              onChangeText={(value) => updateJob({ specialInstructions: value })}
               multiline
               numberOfLines={3}
             />
@@ -431,29 +440,47 @@ export default function ScheduleJob() {
                 textAlignVertical: 'top'
               }}
               placeholder="Enter any additional notes"
-              value={jobData.notes}
-              onChangeText={(value) => setJobData(prev => ({ ...prev, notes: value }))}
+              value={job.notes}
+              onChangeText={(value) => updateJob({ notes: value })}
               multiline
               numberOfLines={3}
             />
           </View>
         </View>
 
-        {/* Submit Button */}
-        <TouchableOpacity
-          style={{
-            backgroundColor: '#007AFF',
-            padding: 16,
-            borderRadius: 8,
-            alignItems: 'center',
-            marginBottom: 20
-          }}
-          onPress={handleSubmit}
-        >
-          <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>
-            Schedule Job
-          </Text>
-        </TouchableOpacity>
+        {/* Navigation Buttons */}
+        <View style={{ flexDirection: 'row', gap: 12, marginBottom: 20 }}>
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#6c757d',
+              padding: 16,
+              borderRadius: 8,
+              flex: 1,
+              alignItems: 'center'
+            }}
+            onPress={previousStep}
+          >
+            <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>
+              Previous
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={{
+              backgroundColor: canProceedToNextStep() ? '#007AFF' : '#ccc',
+              padding: 16,
+              borderRadius: 8,
+              flex: 1,
+              alignItems: 'center'
+            }}
+            onPress={handleSubmit}
+            disabled={!canProceedToNextStep()}
+          >
+            <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>
+              Continue
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </ScrollView>
   )
