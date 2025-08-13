@@ -138,10 +138,6 @@ export default function NewClient() {
   if (viewMode === 'options') {
     return (
       <View style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', padding: 20 }}>
-        <Text style={{ fontSize: 28, fontWeight: 'bold', textAlign: 'center', marginBottom: 40, color: '#333' }}>
-          Add Client
-        </Text>
-        
         <TouchableOpacity
           style={{
             backgroundColor: '#007AFF',

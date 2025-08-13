@@ -199,10 +199,6 @@ export default function ScheduleJob() {
   return (
     <ScrollView style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
       <View style={{ padding: 16 }}>
-        <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 24, textAlign: 'center' }}>
-          Schedule Job
-        </Text>
-
         {/* Client Information */}
         <View style={{ backgroundColor: '#fff', padding: 16, borderRadius: 8, marginBottom: 16 }}>
           <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 12 }}>Client</Text>

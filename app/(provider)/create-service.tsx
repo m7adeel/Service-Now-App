@@ -14,22 +14,26 @@ const PAGES = [
     {
         id: 1,
         name: 'Add Client',
-        page: NewClient
+        page: NewClient,
+        label: 'Select Client'
     },
     {
         id: 2,
         name: 'Quote',
-        page: CreateQuote
+        page: CreateQuote,
+        label: 'Add a Quote'
     },
     {
         id: 3,
         name: 'Schedule',
-        page: ScheduleJob
+        page: ScheduleJob,
+        label: 'Schedule Job'
     },
     {
         id: 4,
         name: 'Invoice',
-        page: SendInvoice
+        page: SendInvoice,
+        label: 'Finalize'
     }
 ]
 
@@ -93,7 +97,7 @@ export default function CreateService() {
                 borderBottomColor: '#eee'
             }}>
                 <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#333' }}>
-                    Create New Service
+                    {PAGES[currentStep].label}
                 </Text>
                 <TouchableOpacity
                     onPress={handleReset}
