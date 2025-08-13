@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useBookingsStore } from '@/store/bookingsStore';
 import { useServicesStore } from '@/store/servicesStore';
 import { Calendar, DollarSign, Briefcase, TrendingUp, Clock, CircleCheck as CheckCircle } from 'lucide-react-native';
+import { router } from 'expo-router';
 
 export default function ProviderDashboard() {
   const { profile } = useAuthStore();
@@ -128,24 +129,33 @@ export default function ProviderDashboard() {
                     {booking.scheduled_date} at {booking.scheduled_time}
                   </Text>
                 </View>
-                <View className={`px-3 py-1 rounded-full ${
-                  booking.status === 'pending' ? 'bg-warning-100' :
-                  booking.status === 'confirmed' ? 'bg-primary-100' :
-                  booking.status === 'completed' ? 'bg-success-100' :
-                  'bg-error-100'
-                }`}>
-                  <Text className={`text-xs font-semibold ${
-                    booking.status === 'pending' ? 'text-warning-700' :
-                    booking.status === 'confirmed' ? 'text-primary-700' :
-                    booking.status === 'completed' ? 'text-success-700' :
-                    'text-error-700'
+                <View className={`px-3 py-1 rounded-full ${booking.status === 'pending' ? 'bg-warning-100' :
+                    booking.status === 'confirmed' ? 'bg-primary-100' :
+                      booking.status === 'completed' ? 'bg-success-100' :
+                        'bg-error-100'
                   }`}>
+                  <Text className={`text-xs font-semibold ${booking.status === 'pending' ? 'text-warning-700' :
+                      booking.status === 'confirmed' ? 'text-primary-700' :
+                        booking.status === 'completed' ? 'text-success-700' :
+                          'text-error-700'
+                    }`}>
                     {booking.status}
                   </Text>
                 </View>
               </View>
             </View>
           ))}
+        </View>
+
+        {/* Add a Service */}
+        <View className='px-5'>
+          <TouchableOpacity className='bg-blue-700 flex flex-row items-center justify-center py-2 rounded-xl'
+            onPress={() => {
+              router.push('/(provider)/create-service')
+            }}
+          >
+            <Text className='text-white'>Add a Client</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Quick Actions */}
